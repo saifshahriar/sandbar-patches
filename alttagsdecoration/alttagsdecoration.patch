@@ -1,0 +1,92 @@
+From 06fbe9584ca65aafd1e59d7c8fdfa7aa85cc299c Mon Sep 17 00:00:00 2001
+From: Saif Shahriar <sh.saif@proton.me>
+Date: Sun, 18 Aug 2024 21:29:14 +0000
+Subject: [PATCH] Port of dwm's alttagsdecoration patch. This patches provides
+ the ability to use an alternative text for tags which contain at least one
+ window. This patch replaces the standard behavious of drawing a little box on
+ the top left edge of the tag box.
+
+---
+ config.h  | 23 +++++++++++++++++++++++
+ sandbar.c | 22 ++++------------------
+ 2 files changed, 27 insertions(+), 18 deletions(-)
+ create mode 100644 config.h
+
+diff --git a/config.h b/config.h
+new file mode 100644
+index 0000000..443ea59
+--- /dev/null
++++ b/config.h
+@@ -0,0 +1,23 @@
++char *user_tags[] = {
++	"dev",
++	"www",
++	"sys",
++	"doc",
++	"vbox",
++	"chat",
++	"mus",
++	"vid",
++	"gfx",
++};
++
++char *alt_user_tags[] = {
++	"[dev]",
++	"[www]",
++	"[sys]",
++	"[doc]",
++	"[vbox]",
++	"[chat]",
++	"[mus]",
++	"[vid]",
++	"[gfx]",
++};
+diff --git a/sandbar.c b/sandbar.c
+index e2a6548..9f4d97e 100644
+--- a/sandbar.c
++++ b/sandbar.c
+@@ -25,6 +25,7 @@
+ #include "wlr-layer-shell-unstable-v1-protocol.h"
+ #include "river-status-unstable-v1-protocol.h"
+ #include "river-control-unstable-v1-protocol.h"
++#include "config.h"
+ 
+ #define DIE(fmt, ...)						\
+ 	do {							\
+@@ -374,8 +375,6 @@ draw_frame(Bar *bar)
+ 	/* Draw on images */
+ 	uint32_t x = 0;
+ 	uint32_t y = (bar->height + font->ascent - font->descent) / 2;
+-	uint32_t boxs = font->height / 9;
+-	uint32_t boxw = font->height / 6 + 2;
+ 	
+ 	for (uint32_t i = 0; i < tags_l; i++) {
+ 		const bool active = bar->mtags & 1 << i;
+@@ -388,22 +387,9 @@ draw_frame(Bar *bar)
+ 		pixman_color_t *fg_color = urgent ? &urgent_fg_color : (active ? &active_fg_color : &inactive_fg_color);
+ 		pixman_color_t *bg_color = urgent ? &urgent_bg_color : (active ? &active_bg_color : &inactive_bg_color);
+ 		
+-		if (!hide_vacant && occupied) {
+-			pixman_image_fill_boxes(PIXMAN_OP_SRC, foreground,
+-						fg_color, 1, &(pixman_box32_t){
+-							.x1 = x + boxs, .x2 = x + boxs + boxw,
+-							.y1 = boxs, .y2 = boxs + boxw
+-						});
+-			if ((!bar->sel || !active) && boxw >= 3) {
+-				/* Make box hollow */
+-				pixman_image_fill_boxes(PIXMAN_OP_SRC, foreground,
+-							&(pixman_color_t){ 0 },
+-							1, &(pixman_box32_t){
+-								.x1 = x + boxs + 1, .x2 = x + boxs + boxw - 1,
+-								.y1 = boxs + 1, .y2 = boxs + boxw - 1
+-							});
+-			}
+-		}
++		tags[i] = user_tags[i];
++		if (!hide_vacant && occupied)
++			tags[i] = alt_user_tags[i];
+ 		
+ 		x = draw_text(tags[i], x, y, foreground, background, fg_color, bg_color,
+ 			      bar->width, bar->height, bar->textpadding, false);
+-- 
+2.45.2
